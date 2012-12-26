@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
-import time, os, logging, types
+import time
+import os
+import logging
 import win32netcon
 import win32net
 import win32ts
@@ -16,8 +18,9 @@ import socket
 from OVirtAgentLogic import AgentLogicBase, DataRetriverBase
 from ctypes import *
 from ctypes.util import find_library
-from ctypes.wintypes import *
+from ctypes.wintypes import DWORD
 import _winreg
+
 
 # Both _winreg.QueryValueEx and win32api.RegQueryValueEx doesn't support reading
 # Unicode strings from the registry (at least on Python 2.5.1).
@@ -36,6 +39,7 @@ def QueryStringValue(hkey, name):
     if windll.advapi32.RegQueryValueExW(hkey.handle, name, None, None, byref(key_value), byref(key_len)) != 0:
         return unicode()
     return key_value.value
+
 
 def GetNetworkInterfaces():
     interfaces = list()
@@ -56,12 +60,15 @@ def GetNetworkInterfaces():
                         except socket.error:
                             # Assume IPv6 if parsing as IPv4 was failed.
                             inet6.append(ip)
-                interfaces.append({ 'name' : adapter.Description,
-                    'inet' : inet, 'inet6' : inet6,
-                    'hw' : adapter.MacAddress.lower() })
+                interfaces.append({
+                    'name': adapter.Description,
+                    'inet': inet,
+                    'inet6': inet6,
+                    'hw': adapter.MacAddress.lower()})
     except:
         logging.exception("Error retrieving network interfaces.")
     return interfaces
+
 
 class PERFORMANCE_INFORMATION(Structure):
     _fields_ = [
@@ -81,66 +88,72 @@ class PERFORMANCE_INFORMATION(Structure):
         ('ThreadCount', DWORD)
     ]
 
+
 def get_perf_info():
     pi = PERFORMANCE_INFORMATION()
     pi.cb = sizeof(pi)
     windll.psapi.GetPerformanceInfo(byref(pi), pi.cb)
     return pi
 
+
 class IncomingMessageTypes:
         Credentials = 11
 
+
 class WinOsTypeHandler:
-    WINNT3_51  = 'Win NT 3.51'
-    WINNT4     = 'Win NT 4'
-    WIN2K      = 'Win 2000'
-    WINXP      = 'Win XP'
-    WIN2003    = 'Win 2003'
-    WIN2008    = 'Win 2008'
-    WIN2008R2  = 'Win 2008 R2'
-    WIN2012    = 'Win 2012'
-    WIN7       = 'Win 7'
-    WIN8       = 'Win 8'
+    WINNT3_51 = 'Win NT 3.51'
+    WINNT4 = 'Win NT 4'
+    WIN2K = 'Win 2000'
+    WINXP = 'Win XP'
+    WIN2003 = 'Win 2003'
+    WIN2008 = 'Win 2008'
+    WIN2008R2 = 'Win 2008 R2'
+    WIN2012 = 'Win 2012'
+    WIN7 = 'Win 7'
+    WIN8 = 'Win 8'
     WINCE3_1_0 = 'Win CE 1.0'
     WINCE3_2_0 = 'Win CE 2.0'
     WINCE3_2_1 = 'Win CE 2.1'
     WINCE3_3_0 = 'Win CE 3.0'
-    UNKNOWN    = 'Unknown'
+    UNKNOWN = 'Unknown'
     #winVersionMatrix is constructed from 3 fields <platformId>.<MajorVersion>.<MinorVersion>
     winVersionMatrix = {
-        '2.3.51' : WINNT3_51,
-        '2.4.0'  : WINNT4,
-        '2.5.0'  : WIN2K,
-        '2.5.1'  : WINXP,
-        '2.5.2'  : WIN2003,
-        '2.6.0'  : WIN2008,
-        '2.6.1'  : WIN2008R2, # Window Server 2008 R2
-        '2.6.2'  : WIN2012,
-        '3.1.0'  : WINCE3_1_0,
-        '3.2.0'  : WINCE3_2_0,
-        '3.2.1'  : WINCE3_2_1 ,
-        '3.3.0'  : WINCE3_3_0}
+        '2.3.51': WINNT3_51,
+        '2.4.0': WINNT4,
+        '2.5.0': WIN2K,
+        '2.5.1': WINXP,
+        '2.5.2': WIN2003,
+        '2.6.0': WIN2008,
+        '2.6.1': WIN2008R2,  # Window Server 2008 R2
+        '2.6.2': WIN2012,
+        '3.1.0': WINCE3_1_0,
+        '3.2.0': WINCE3_2_0,
+        '3.2.1': WINCE3_2_1,
+        '3.3.0': WINCE3_3_0}
+
     def getWinOsType(self):
         retval = self.UNKNOWN
         try:
             versionTupple = win32api.GetVersionEx(1)
             key = "%d.%d.%d" % (
                 versionTupple[3], versionTupple[0], versionTupple[1])
-            if self.winVersionMatrix.has_key(key):
+            if key in self.winVersionMatrix:
                 retval = self.winVersionMatrix[key]
             # Window 7 and Window Server 2008 R2 share the same version.
             # Need to fix it using the wProductType field.
                 VER_NT_WORKSTATION = 1
             if (retval == WinOsTypeHandler.WIN2008R2 and
-                versionTupple[8] == VER_NT_WORKSTATION):
-                    retval = WinOsTypeHandler.WIN7
+                    versionTupple[8] == VER_NT_WORKSTATION):
+                retval = WinOsTypeHandler.WIN7
             elif (retval == WinOsTypeHandler.WIN2012 and
-                  versionTupple[8] == VER_NT_WORKSTATION):
+                    versionTupple[8] == VER_NT_WORKSTATION):
                 retval = WinOsTypeHandler.WIN8
-            logging.debug("WinOsTypeHandler::getWinOsType osType = '%s'", retval)
+            logging.debug("WinOsTypeHandler::getWinOsType osType = '%s'",
+                          retval)
         except:
             logging.exception("getWinOsType - failed")
         return retval
+
 
 class CommandHandlerWin:
 
@@ -203,17 +216,22 @@ class CommandHandlerWin:
             windll.kernel32.Wow64DisableWow64FsRedirection(old_value)
 
     def hibernate(self, state):
-        token = win32security.OpenProcessToken(win32api.GetCurrentProcess(),
+        token = win32security.OpenProcessToken(
+            win32api.GetCurrentProcess(),
             win32security.TOKEN_QUERY | win32security.TOKEN_ADJUST_PRIVILEGES)
-        shutdown_priv = win32security.LookupPrivilegeValue(None,
+        shutdown_priv = win32security.LookupPrivilegeValue(
+            None,
             win32security.SE_SHUTDOWN_NAME)
-        privs = win32security.AdjustTokenPrivileges(token, False,
-            [ (shutdown_priv, win32security.SE_PRIVILEGE_ENABLED) ])
+        privs = win32security.AdjustTokenPrivileges(
+            token,
+            False,
+            [(shutdown_priv, win32security.SE_PRIVILEGE_ENABLED)])
         logging.debug("Privileges before hibernation: %s", privs)
-        if windll.powrprof.SetSuspendState(state=='disk', True, False) != 0:
+        if windll.powrprof.SetSuspendState(state == 'disk', True, False) != 0:
             logging.info("System was in hibernation state.")
         else:
-            logging.error("Error setting system to hibernation state: %d",
+            logging.error(
+                "Error setting system to hibernation state: %d",
                 win32api.GetLastError())
 
     # The LockWorkStation function is callable only by processes running on the interactive desktop.
@@ -228,12 +246,21 @@ class CommandHandlerWin:
                 if userToken is not None:
                     logging.debug("Got the active user token.")
                     # The following access rights are required for CreateProcessAsUser.
-                    access = win32security.TOKEN_QUERY|win32security.TOKEN_DUPLICATE|win32security.TOKEN_ASSIGN_PRIMARY
-                    dupToken = win32security.DuplicateTokenEx(userToken, win32security.SecurityImpersonation, access, win32security.TokenPrimary, None)
+                    access = win32security.TOKEN_QUERY
+                    access |= win32security.TOKEN_DUPLICATE
+                    access |= win32security.TOKEN_ASSIGN_PRIMARY
+                    dupToken = win32security.DuplicateTokenEx(
+                        userToken,
+                        win32security.SecurityImpersonation,
+                        access,
+                        win32security.TokenPrimary,
+                        None)
                     userToken.Close()
                 if dupToken is not None:
                     logging.debug("Duplicated the active user token.")
-                    lockCmd = "%s\\system32\\rundll32.exe user32.dll,LockWorkStation" % (os.environ['WINDIR'])
+                    lockCmd = os.path.join(os.environ['WINDIR'],
+                                           "system32\\rundll32.exe")
+                    lockCmd += " user32.dll,LockWorkStation"
                     logging.debug("Executing \"%s\".", lockCmd)
                     win32process.CreateProcessAsUser(dupToken, None, lockCmd, None, None, 0, 0, None, None, win32process.STARTUPINFO())
                     dupToken.Close()
@@ -241,6 +268,7 @@ class CommandHandlerWin:
                 logging.debug("No active session. Ignoring lock workstation command.")
         except:
             logging.exception("LockWorkStation exception")
+
 
 class WinDataRetriver(DataRetriverBase):
     def __init__(self):
