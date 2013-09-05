@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS=-I m4
 SUBDIRS =                \
     ovirt-guest-agent    \
     GinaSSO              \
-	tests				 \
+    tests                \
     windows-credprov     \
     $(NULL)
 
@@ -54,7 +54,7 @@ PEP8_WHITELIST = \
     ovirt-guest-agent/WinFile.py \
     ovirt-guest-agent/ovirt-guest-agent.py \
     ovirt-guest-agent/version.py \
-	tests/*.py
+    tests/*.py
 
 PEP8_BLACKLIST = ovirt-guest-agent/setup.py
 
