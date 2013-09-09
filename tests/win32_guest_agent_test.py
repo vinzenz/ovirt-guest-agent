@@ -3,10 +3,13 @@
 # vim:fenc=utf-8
 
 
-import test_port
-from testrunner import GuestAgentTestCase
-from GuestAgentWin32 import WinVdsAgent
 from ConfigParser import ConfigParser
+
+from GuestAgentWin32 import WinVdsAgent
+from message_validator import MessageValidator
+from testrunner import GuestAgentTestCase
+
+import test_port
 
 
 class TestPortWriteBuffer(test_port.TestPort):
@@ -25,7 +28,8 @@ class TestPortWriteBuffer(test_port.TestPort):
 class WindowsFunctionalTest(GuestAgentTestCase):
     def setUp(self):
         self._vport_name = "windows-functional-test-port"
-        self._vport = TestPortWriteBuffer(self._vport_name)
+        self._validator = MessageValidator(self._vport_name)
+        self._vport = self._validator.port()
         test_port.add_test_port(self._vport_name, self._vport)
         self._config = ConfigParser()
         self._config.add_section('general')
@@ -37,30 +41,38 @@ class WindowsFunctionalTest(GuestAgentTestCase):
         self._config.set('virtio', 'device', 'vport_name')
         self.vdsAgent = WinVdsAgent(self._config)
 
-    def printBuf(self):
-        print self._vport._buffer
-        self._vport._buffer = ""
-
     def testSendInfo(self):
-        self.vdsAgent.sendInfo()
-        self.printBuf()
+        self._validator.verifySendInfo(self.vdsAgent)
 
     def testSendAppList(self):
-        self.vdsAgent.sendAppList()
-        self.printBuf()
+        self._validator.verifySendAppList(self.vdsAgent)
 
     def testSendDisksUsages(self):
-        self.vdsAgent.sendDisksUsages()
-        self.printBuf()
+        self._validator.verifySendDisksUsages(self.vdsAgent)
 
     def testSendMemoryStats(self):
-        self.vdsAgent.sendMemoryStats()
-        self.printBuf()
+        self._validator.verifySendMemoryStats(self.vdsAgent)
 
     def testSendFQDN(self):
-        self.vdsAgent.sendFQDN()
-        self.printBuf()
+        self._validator.verifySendFQDN(self.vdsAgent)
 
     def testSendUserInfo(self):
-        self.vdsAgent.sendUserInfo()
-        self.printBuf()
+        self._validator.verifySendUserInfo(self.vdsAgent)
+
+    def testSessionLogon(self):
+        self._validator.verifySessionLogon(self.vdsAgent)
+
+    def testSessionLogoff(self):
+        self._validator.verifySessionLogon(self.vdsAgent)
+
+    def testSessionLock(self):
+        self._validator.verifySessionLock(self.vdsAgent)
+
+    def testSessionUnlock(self):
+        self._validator.verifySessionUnlock(self.vdsAgent)
+
+    def testSessionStartup(self):
+        self._validator.verifySessionStartup(self.vdsAgent)
+
+    def testSessionShutdown(self):
+        self._validator.verifySessionShutdown(self.vdsAgent)
