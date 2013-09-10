@@ -10,11 +10,13 @@ class EncodingTest(TestCaseBase):
 
     def testNonUnicodeKeyInput(self):
         non_unicode_key = {'non-unicode-key': u'unicode value'}
-        self.assertRaises(TypeError, _filter_object, (non_unicode_key,))
+        self.assertEquals({u'non-unicode-key': u'unicode value'},
+                          _filter_object(non_unicode_key))
 
     def testNonUnicodeValueInput(self):
-        non_unicode_value = {u'unicode-key': 'unicode value'}
-        self.assertRaises(TypeError, _filter_object, (non_unicode_value,))
+        non_unicode_value = {u'unicode-key': 'non-unicode value'}
+        self.assertEquals({u'unicode-key': u'non-unicode value'},
+                          _filter_object(non_unicode_value))
 
     def testIllegalUnicodeInput(self):
         ILLEGAL_DATA = {u'foo': u'\x00data\x00test\uffff\ufffe\udc79\ud800'}

@@ -4,6 +4,6 @@ AM_LOG_FLAGS=$(top_srcdir)/tests/testrunner.py
 
 TESTS=\
     encoding_test.py \
-    linux_guest_agent_test.py \
+    guest_agent_test.py \
     $(NULL)
 
